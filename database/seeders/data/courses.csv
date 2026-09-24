@@ -1,0 +1,75 @@
+id,courseName,campus_id,status,date_added,college,is_open_program
+1,Bachelor of Agricultural Technology,1,1,10/27/2019 21:09,"CANR
+",0
+2,BS Agroforestry,1,1,10/27/2019 21:09,"CANR
+",1
+3,BS Agriculture in General Curriculum,1,1,10/27/2019 21:09,CANR,1
+4,BS Agriculture Major in Agriculture Extension,1,1,10/27/2019 21:09,"CANR
+",1
+5,BS Agriculture Major in Agronomy,1,1,10/27/2019 21:09,"CANR
+",1
+6,BS Agriculture Major in Animal Science,1,1,10/27/2019 21:09,"CANR
+",1
+7,BS Agriculture Major in Agricultural Economics,1,1,10/27/2019 21:09,"CANR
+",1
+8,BS Agriculture Major in Entomology,1,1,10/27/2019 21:09,"CANR
+",1
+9,BS Agriculture Major in Farming System,1,1,10/27/2019 21:09,"CANR
+",1
+10,BS Agriculture Major in Plant Pathology,1,1,10/27/2019 21:09,"CANR
+",1
+11,BS Agriculture Major in Soil Science,1,1,10/27/2019 21:09,"CANR
+",1
+12,Expanded Tertiary Educ Equivalency & Accreditation Prog (ETEEAP),1,0,10/27/2019 21:09,CANR,0
+13,BS Agribusiness,1,1,10/27/2019 21:09,CEM,0
+14,Bachelor of Secondary Education Major in English,1,1,10/27/2019 21:09,CDE,0
+15,Bachelor of Secondary Education Major in Mathematics,1,1,10/27/2019 21:09,CDE,0
+16,Bachelor of Secondary Education Major in Science,1,1,10/27/2019 21:09,CDE,0
+17,Bachelor of Secondary Education Major in Filipino,1,1,10/27/2019 21:09,CDE,0
+18,Bachelor of Elementary Education,1,1,10/27/2019 21:09,CDE,0
+19,Enriched Secondary Education Curriculum,1,0,10/27/2019 21:09,CDE,0
+20,BS Biology,1,1,10/27/2019 21:09,CAS,0
+21,BS Environmental Science,1,1,10/27/2019 21:09,CAS,1
+22,BS Food Technology (BSFT),1,1,10/27/2019 21:09,CEFS,0
+23,BS Agricultural and Biosystems Engineering - 4 years,1,1,10/27/2019 21:09,CEFS,1
+24,Enriched Secondary Education,0,1,10/27/2019 21:09,NULL,0
+25,Bachelor of Secondary Education Major in English,2,1,10/27/2019 21:09,NULL,0
+26,Bachelor of Secondary Education Major in Mathematics,2,1,10/27/2019 21:09,NULL,0
+28,Bachelor of Secondary Education Major in Filipino,2,1,10/27/2019 21:09,NULL,0
+29,Bachelor of Elementary Education,2,1,10/27/2019 21:09,NULL,0
+30,BS Industrial Technology Major in Automotive,2,1,10/27/2019 21:09,NULL,0
+31,BS Industrial Technology Major in Electrical,2,1,10/27/2019 21:09,NULL,0
+32,BS Industrial Technology Major in Electronics,2,1,10/27/2019 21:09,NULL,0
+35,BS Industrial Technology Major in Hospitality Management,2,1,10/27/2019 21:09,NULL,0
+36,BS Industrial Technology Major in Refrigeration and Air-conditioning,2,1,10/27/2019 21:09,NULL,1
+37,Bachelor of Arts in English Language,2,1,10/27/2019 21:09,NULL,0
+38,Bachelor of Science in Mathematics,2,1,10/27/2019 21:09,NULL,1
+39,Bachelor of Science in Fisheries,2,1,10/27/2019 21:09,NULL,1
+40,Bachelor of Secondary Education Major in English,3,1,10/27/2019 21:09,NULL,0
+41,Bachelor of Secondary Education Major in Mathematics,3,1,10/27/2019 21:09,NULL,0
+43,Bachelor of Secondary Education Major in Filipino,3,1,10/27/2019 21:09,NULL,0
+44,Bachelor of Elementary Education,3,1,10/27/2019 21:09,NULL,0
+45,BS Information Technology,4,1,10/27/2019 21:09,NULL,1
+46,Computer Hardware Servicing NC II,4,0,10/27/2019 21:09,NULL,0
+47,Secondary Education (Enriched Curriculum),4,0,10/27/2019 21:09,NULL,0
+48,BS Criminology,4,1,10/27/2019 21:09,NULL,0
+49,Bachelor of Elementary Education (General),4,1,10/27/2019 21:09,NULL,0
+50,Bachelor of Secondary Education Major in English,4,1,10/27/2019 21:09,NULL,0
+51,Bachelor of Secondary Education Major in Mathematics,4,1,10/27/2019 21:09,NULL,0
+52,Bachelor of Secondary Education Major in Science,4,1,10/27/2019 21:09,NULL,0
+53,Bachelor of Secondary Education Major in Filipino,4,1,10/27/2019 21:09,NULL,0
+54,Bachelor of Science Industrial Technology Major in Automotive Technology,4,1,10/27/2019 21:09,NULL,0
+55,Bachelor of Science Industrial Technology Major in Electrical Technology,4,1,10/27/2019 21:09,NULL,0
+56,Bachelor of Science Industrial Technology Major in Electronics Technology,4,1,10/27/2019 21:09,NULL,0
+57,Bachelor of Science Industrial Technology Major in Food Trade,4,1,10/27/2019 21:09,NULL,0
+58,Bachelor of Science Industrial Technology Major in Mechanical Technology,4,1,10/27/2019 21:09,NULL,0
+59,BS Agriculture Major Horticulture,1,1,11/7/2019 9:37,CANR,1
+60,Doctor of Veterinary Medicine (DVM) - 6 years,1,1,11/7/2019 10:40,CVM,0
+66,Bachelor of Technology and Livelihood Education (BTLED) Major Home Economics,4,1,11/7/2019 12:17,NULL,0
+67,Bachelor of Secondary Education Major in Science,3,1,11/7/2019 12:19,NULL,0
+68,Bachelor of Science in Environmental Science,3,1,3/3/2021 8:50,NULL,0
+69,BS Environmental Science,2,1,4/26/2021 14:45,NULL,1
+70,Bachelor of Science in Environmental Science,4,1,4/27/2021 16:42,NULL,1
+71,Bachelor of Science in Agroforestry,4,1,4/27/2021 16:42,NULL,1
+72,Bachelor of Science in Tourism Management Major in Agritourism,1,1,2/7/2023 9:41,CEM,0
+73,Bachelor of Science in Marine Biology (BSMBio),3,1,2/7/2023 10:01,NULL,0
