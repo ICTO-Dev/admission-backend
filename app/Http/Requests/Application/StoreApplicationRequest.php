@@ -30,7 +30,7 @@ class StoreApplicationRequest extends FormRequest
             'barangayId' => 'nullable',
             'barangay_id' => 'nullable',
             'studentType' => 'required|string',
-            'schoolYear' => 'nullable|string',
+            'school_year_id' => 'nullable|integer|exists:school_years,id',
 
             // Personal Information
             'lrn' => 'required|string|size:12',

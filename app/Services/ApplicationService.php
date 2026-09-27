@@ -9,6 +9,7 @@ use App\Models\ApplicantSibling;
 use App\Models\Application;
 use App\Models\Campus;
 use App\Models\Course;
+use App\Models\SchoolYear;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -19,35 +20,147 @@ class ApplicationService
     /**
      * Get paginated applications with search & filter support.
      */
-    public function paginate(array $filters = [], int $perPage = 15): LengthAwarePaginator
+    public function paginate(array $filters = [], int $perPage = 10): LengthAwarePaginator
     {
         $query = Application::with([
-            'campus',
-            'firstCourse',
-            'secondCourse',
-            'barangay',
+            'campus:id,name,aname',
+            'schoolYear:id,name,is_active,status',
+            'firstCourse:id,courseName',
+            'secondCourse:id,courseName',
+            'barangay:id,name',
+            'examSchedule:id,exam_date,start_time,end_time,room_id',
+            'examSchedule.room:id,room_name,venue_id',
             'family',
+            'siblings',
             'education',
             'healthEmergency',
-            'siblings',
         ])->latest();
 
+        if (!empty($filters['campus_id'])) {
+            $query->where('campus_id', $filters['campus_id']);
+        }
+
+        if (!empty($filters['school_year_id'])) {
+            $query->where('school_year_id', $filters['school_year_id']);
+        } elseif (!empty($filters['school_year'])) {
+            $syFilter = $filters['school_year'];
+            if (is_numeric($syFilter)) {
+                $query->where('school_year_id', (int) $syFilter);
+            } else {
+                $query->whereHas('schoolYear', function ($sq) use ($syFilter) {
+                    $sq->where('name', $syFilter);
+                });
+            }
+        }
+
         if (!empty($filters['search'])) {
-            $search = $filters['search'];
+            $search = trim($filters['search']);
             $query->where(function ($q) use ($search) {
                 $q->where('application_no', 'like', "%{$search}%")
                   ->orWhere('last_name', 'like', "%{$search}%")
                   ->orWhere('first_name', 'like', "%{$search}%")
+                  ->orWhere('middle_name', 'like', "%{$search}%")
                   ->orWhere('email_address', 'like', "%{$search}%")
                   ->orWhere('lrn', 'like', "%{$search}%");
             });
         }
 
-        if (!empty($filters['status'])) {
-            $query->where('status', $filters['status']);
+        if (!empty($filters['status']) && $filters['status'] !== 'All') {
+            if ($filters['status'] === 'Approved' || $filters['status'] === 'Approved for Exam') {
+                $query->whereIn('status', ['Approved for Exam', 'Approved']);
+            } else {
+                $query->where('status', $filters['status']);
+            }
         }
 
         return $query->paginate($perPage);
+    }
+
+    /**
+     * Get status counts across applications.
+     */
+    public function getStatusCounts(?int $campusId = null, ?string $schoolYear = null): array
+    {
+        $query = Application::query();
+
+        if ($campusId) {
+            $query->where('campus_id', $campusId);
+        }
+
+        if ($schoolYear) {
+            if (is_numeric($schoolYear)) {
+                $query->where('school_year_id', (int) $schoolYear);
+            } else {
+                $query->whereHas('schoolYear', function ($sq) use ($schoolYear) {
+                    $sq->where('name', $schoolYear);
+                });
+            }
+        }
+
+        return [
+            'all' => (clone $query)->count(),
+            'pending' => (clone $query)->where('status', 'Pending')->count(),
+            'approved' => (clone $query)->whereIn('status', ['Approved for Exam', 'Approved'])->count(),
+            'scheduled' => (clone $query)->where('status', 'Scheduled')->count(),
+            'rejected' => (clone $query)->where('status', 'Rejected')->count(),
+        ];
+    }
+
+    /**
+     * Update application status (e.g. Approved for Exam, Rejected, Pending).
+     */
+    public function updateStatus(string $identifier, string $status, ?string $rejectionReason = null): Application
+    {
+        $application = $this->findByNoOrId($identifier);
+        if (!$application) {
+            throw new \Illuminate\Database\Eloquent\ModelNotFoundException("Application record '{$identifier}' not found");
+        }
+
+        $application->status = $status;
+        if ($status === 'Rejected') {
+            $application->rejection_reason = $rejectionReason;
+        } elseif ($status === 'Approved for Exam' || $status === 'Approved') {
+            $application->rejection_reason = null;
+        }
+        $application->save();
+
+        return $this->findByNoOrId($application->id);
+    }
+
+    /**
+     * Assign exam schedule slot to an application.
+     */
+    public function assignExamSchedule(string $identifier, int|string $examScheduleId, ?string $course = null): Application
+    {
+        $application = $this->findByNoOrId($identifier);
+        if (!$application) {
+            throw new \Illuminate\Database\Eloquent\ModelNotFoundException("Application record '{$identifier}' not found");
+        }
+
+        $schedule = \App\Models\ExamSchedule::with(['room.venue'])->withCount('applications')->find($examScheduleId);
+        if (!$schedule) {
+            throw new \InvalidArgumentException('Selected exam schedule slot not found.');
+        }
+
+        $totalSeats = $schedule->room?->total_seat ?? $schedule->max_capacity ?? 30;
+        if ($schedule->applications_count >= $totalSeats || $schedule->status === 'Full') {
+            $roomName = $schedule->room?->room_name ?? 'Room';
+            throw new \RuntimeException("Automated Conflict Blocked: Room '{$roomName}' is at full capacity ({$schedule->applications_count}/{$totalSeats} seats). No more applicants can be assigned to this schedule.");
+        }
+
+        $application->exam_schedule_id = $schedule->id;
+        $application->status = 'Scheduled';
+
+        if ($course) {
+            $courseObj = Course::where('courseName', $course)->orWhere('id', $course)->first();
+            if ($courseObj) {
+                $application->course_1_id = $courseObj->id;
+            }
+        }
+
+        $application->save();
+
+        return $this->findByNoOrId($application->id);
     }
 
     /**
@@ -57,9 +170,11 @@ class ApplicationService
     {
         return Application::with([
             'campus',
+            'schoolYear:id,name,is_active,status',
             'firstCourse',
             'secondCourse',
             'barangay',
+            'examSchedule.room.venue',
             'family',
             'siblings',
             'education',
@@ -118,10 +233,26 @@ class ApplicationService
 
             $barangayId = !empty($data['barangayId']) ? (string) $data['barangayId'] : (!empty($data['barangay_id']) ? (string) $data['barangay_id'] : null);
 
+            // Resolve open/active School Year
+            $openSchoolYear = null;
+            if (!empty($data['school_year_id'])) {
+                $openSchoolYear = SchoolYear::find($data['school_year_id']);
+            }
+
+            if (!$openSchoolYear) {
+                $openSchoolYear = SchoolYear::where('status', 'Open')->where('is_active', true)->first()
+                               ?? SchoolYear::where('status', 'Open')->first()
+                               ?? SchoolYear::where('is_active', true)->first();
+            }
+
+            if (!$openSchoolYear) {
+                throw new \RuntimeException('Admissions are currently closed. No open academic school year is available.');
+            }
+
             // 4. Create Main Application Record
             $application = Application::create([
                 'application_no' => $applicationNo,
-                'school_year' => $data['schoolYear'] ?? '2026-2027',
+                'school_year_id' => $openSchoolYear->id,
                 'student_type' => $data['studentType'],
                 'campus_id' => $campusId,
                 'course_1_id' => $course1Id,
@@ -266,6 +397,7 @@ class ApplicationService
             ]);
 
             return $application->load([
+                'schoolYear',
                 'campus',
                 'firstCourse',
                 'secondCourse',

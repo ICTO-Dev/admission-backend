@@ -16,7 +16,7 @@ class Application extends Model
 
     protected $fillable = [
         'application_no',
-        'school_year',
+        'school_year_id',
         'student_type',
         'campus_id',
         'course_1_id',
@@ -42,7 +42,8 @@ class Application extends Model
         'indigenous_group',
         'is_solo_parent',
         'status',
-        'exam_schedule_slot_id',
+        'rejection_reason',
+        'exam_schedule_id',
     ];
 
     protected $casts = [
@@ -53,8 +54,20 @@ class Application extends Model
         'campus_id' => 'integer',
         'course_1_id' => 'integer',
         'course_2_id' => 'integer',
+        'school_year_id' => 'integer',
         'barangay_id' => 'string',
+        'exam_schedule_id' => 'integer',
     ];
+
+    public function schoolYear(): BelongsTo
+    {
+        return $this->belongsTo(SchoolYear::class, 'school_year_id');
+    }
+
+    public function examSchedule(): BelongsTo
+    {
+        return $this->belongsTo(ExamSchedule::class, 'exam_schedule_id');
+    }
 
     public function campus(): BelongsTo
     {

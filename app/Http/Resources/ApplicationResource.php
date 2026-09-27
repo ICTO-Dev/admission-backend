@@ -14,10 +14,16 @@ class ApplicationResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $family = $this->family;
-        $edu = $this->education;
-        $health = $this->healthEmergency;
-        $siblings = $this->siblings;
+        $family = $this->relationLoaded('family') ? $this->family : null;
+        $edu = $this->relationLoaded('education') ? $this->education : null;
+        $health = $this->relationLoaded('healthEmergency') ? $this->healthEmergency : null;
+        $siblings = $this->relationLoaded('siblings') ? $this->siblings : collect();
+        $campus = $this->relationLoaded('campus') ? $this->campus : null;
+        $course1 = $this->relationLoaded('firstCourse') ? $this->firstCourse : null;
+        $course2 = $this->relationLoaded('secondCourse') ? $this->secondCourse : null;
+        $barangay = $this->relationLoaded('barangay') ? $this->barangay : null;
+        $examSched = $this->relationLoaded('examSchedule') ? $this->examSchedule : null;
+        $sy = $this->relationLoaded('schoolYear') && $this->schoolYear ? $this->schoolYear : null;
 
         return [
             // Identifiers
@@ -25,20 +31,37 @@ class ApplicationResource extends JsonResource
             'db_id' => $this->id,
             'applicationNo' => $this->application_no,
             'application_no' => $this->application_no,
-            'schoolYear' => $this->school_year,
+            'school_year_id' => $this->school_year_id,
+            'school_year' => $sy ? [
+                'id' => $sy->id,
+                'name' => $sy->name,
+                'is_active' => (bool) $sy->is_active,
+                'status' => $sy->status,
+            ] : null,
             'studentType' => $this->student_type,
-            'campus' => $this->campus?->name ?? $this->campus_name,
+            'campus' => $campus?->name ?? $this->campus_name,
             'campusId' => $this->campus_id,
-            'courseApplied1st' => $this->firstCourse?->courseName ?? $this->course_applied_1st,
+            'courseApplied1st' => $course1?->courseName ?? $this->course_applied_1st,
             'course1Id' => $this->course_1_id,
-            'courseApplied2nd' => $this->secondCourse?->courseName ?? $this->course_applied_2nd,
+            'courseApplied2nd' => $course2?->courseName ?? $this->course_applied_2nd,
             'course2Id' => $this->course_2_id,
             'barangayId' => $this->barangay_id,
-            'barangay' => $this->barangay ? [
-                'id' => $this->barangay->id,
-                'name' => $this->barangay->name,
+            'barangay' => $barangay ? [
+                'id' => $barangay->id,
+                'name' => $barangay->name,
             ] : null,
             'status' => $this->status,
+            'rejectionReason' => $this->rejection_reason,
+            'rejection_reason' => $this->rejection_reason,
+            'exam_schedule_id' => $this->exam_schedule_id,
+            'examSchedule' => $examSched ? [
+                'id' => $examSched->id,
+                'exam_date' => $examSched->exam_date?->format('Y-m-d'),
+                'start_time' => $examSched->start_time,
+                'end_time' => $examSched->end_time,
+                'day_label' => $examSched->day_label,
+                'room' => $examSched->relationLoaded('room') ? $examSched->room?->room_name : null,
+            ] : null,
             'submissionDate' => $this->created_at?->toIso8601String(),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
