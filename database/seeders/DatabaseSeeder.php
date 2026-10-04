@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Campus;
 use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
@@ -15,20 +16,27 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
+        // 1. Campuses
+        $this->call(CampusSeeder::class);
 
+        // 2. Default Admin User
+        $piliCampus = Campus::where('name', 'Pili')->first() ?? Campus::first();
         User::firstOrCreate(
             ['email' => 'admin@cbsua.edu.ph'],
             [
                 'name' => 'System Admin',
                 'password' => bcrypt('password123'),
                 'role_id' => 1,
-                'campus_id' => 1,
+                'campus_id' => $piliCampus?->id ?? 1,
             ]
         );
 
-        $this->call(CampusSeeder::class);
-        $this->call(CourseSeeder::class);
-        $this->call(UserSeeder::class);
+        // 3. Courses, Users, Exam Schedules, and Applications
+        $this->call([
+            CourseSeeder::class,
+            UserSeeder::class,
+            ExamSchedulingSeeder::class,
+            ApplicationSeeder::class,
+        ]);
     }
 }

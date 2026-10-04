@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Mail\ExamPermitMail;
 use App\Models\ApplicantEducation;
 use App\Models\ApplicantFamily;
 use App\Models\ApplicantHealthEmergency;
@@ -9,9 +10,12 @@ use App\Models\ApplicantSibling;
 use App\Models\Application;
 use App\Models\Campus;
 use App\Models\Course;
+use App\Models\ExamSchedule;
 use App\Models\SchoolYear;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -137,7 +141,7 @@ class ApplicationService
             throw new \Illuminate\Database\Eloquent\ModelNotFoundException("Application record '{$identifier}' not found");
         }
 
-        $schedule = \App\Models\ExamSchedule::with(['room.venue'])->withCount('applications')->find($examScheduleId);
+        $schedule = ExamSchedule::with(['room.venue', 'campus'])->withCount('applications')->find($examScheduleId);
         if (!$schedule) {
             throw new \InvalidArgumentException('Selected exam schedule slot not found.');
         }
@@ -159,6 +163,26 @@ class ApplicationService
         }
 
         $application->save();
+
+        // Calculate applicant seat number in this room schedule
+        $seatNo = Application::where('exam_schedule_id', $schedule->id)
+            ->where('id', '<=', $application->id)
+            ->count();
+        if ($seatNo === 0) {
+            $seatNo = 1;
+        }
+
+        // Send confirmation and permit email notification to applicant
+        if (!empty($application->email_address)) {
+            try {
+                $coordinator = auth('api')->user() ?? auth()->user();
+                Mail::to($application->email_address)->send(
+                    new ExamPermitMail($application, $schedule, $coordinator, $seatNo)
+                );
+            } catch (\Throwable $e) {
+                Log::error("Failed to send exam permit email to [{$application->email_address}]: " . $e->getMessage());
+            }
+        }
 
         return $this->findByNoOrId($application->id);
     }
@@ -425,8 +449,9 @@ class ApplicationService
         $fileName = 'applicant_' . Str::slug($appNo) . '_' . Str::random(8) . '.' . $extension;
         $filePath = 'applicants/photos/' . $fileName;
 
-        Storage::disk('public')->put($filePath, $decoded);
+        $disk = config('filesystems.photo_disk', 'public');
+        Storage::disk($disk)->put($filePath, $decoded, 'public');
 
-        return '/storage/' . $filePath;
+        return $filePath;
     }
 }

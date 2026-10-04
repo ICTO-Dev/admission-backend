@@ -296,8 +296,14 @@ class ApplicationSeeder extends Seeder
             ],
         ];
 
+        $activeSchoolYear = \App\Models\SchoolYear::where('is_active', true)->first() ?? \App\Models\SchoolYear::first();
+        $defaultExamSchedule = \App\Models\ExamSchedule::first();
+
         foreach ($applicants as $appData) {
-            $appData['school_year_id'] = $appData['school_year_id'] ?? 1;
+            $appData['school_year_id'] = $appData['school_year_id'] ?? $activeSchoolYear?->id ?? 1;
+            if (!empty($appData['exam_schedule_id'])) {
+                $appData['exam_schedule_id'] = $defaultExamSchedule?->id ?? null;
+            }
             $application = Application::updateOrCreate(
                 ['application_no' => $appData['application_no']],
                 $appData

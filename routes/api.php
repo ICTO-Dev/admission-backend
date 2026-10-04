@@ -46,6 +46,7 @@ Route::apiResource('courses', CourseController::class);
 Route::apiResource('applications', ApplicationController::class)->only(['index', 'store', 'show']);
 Route::patch('/applications/{id}/status', [ApplicationController::class, 'updateStatus']);
 Route::post('/applications/{id}/assign-schedule', [ApplicationController::class, 'assignSchedule']);
+Route::get('/applications/{id}/pdf-permit', [\App\Http\Controllers\PermitController::class, 'showPermit']);
 
 // Exam Scheduling Resource Routes
 Route::apiResource('school-years', SchoolYearController::class);
