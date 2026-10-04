@@ -1,0 +1,56 @@
+{
+  "family": "admission",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::322909724195:role/admission-exec",
+  "taskRoleArn": "arn:aws:iam::322909724195:role/admission-task",
+  "containerDefinitions": [
+    {
+      "name": "admission",
+      "image": "PLACEHOLDER_REPLACED_BY_PIPELINE",
+      "essential": true,
+      "portMappings": [{ "containerPort": 8080 }],
+      "environment": [
+        { "name": "APP_ENV", "value": "production" },
+        { "name": "APP_DEBUG", "value": "false" },
+        { "name": "APP_URL", "value": "https://admission-api.cbsua.edu.ph" },
+        { "name": "LOG_CHANNEL", "value": "stderr" },
+        { "name": "DB_CONNECTION", "value": "mysql" },
+        { "name": "DB_HOST", "value": "cbsua-core-mariadb.cdtqppyn9t3k.ap-southeast-1.rds.amazonaws.com" },
+        { "name": "DB_PORT", "value": "3306" },
+        { "name": "DB_DATABASE", "value": "admission_db" },
+        { "name": "DB_USERNAME", "value": "ict_user" },
+        { "name": "SESSION_DRIVER", "value": "database" },
+        { "name": "QUEUE_CONNECTION", "value": "database" },
+        { "name": "CACHE_STORE", "value": "database" },
+        { "name": "FILESYSTEM_DISK", "value": "s3" },
+        { "name": "AWS_DEFAULT_REGION", "value": "ap-southeast-1" },
+        { "name": "AWS_BUCKET", "value": "cbsua-admission-uploads" },
+        { "name": "FRONTEND_URL", "value": "https://admission.cbsua.edu.ph" },
+        { "name": "MAIL_HOST", "value": "smtp.gmail.com" },
+        { "name": "MAIL_PORT", "value": "587" },
+        { "name": "MAIL_ENCRYPTION", "value": "tls" },
+        { "name": "MAIL_USERNAME", "value": "admission-no-reply@cbsua.edu.ph" },
+        { "name": "MAIL_FROM_ADDRESS", "value": "admission-no-reply@cbsua.edu.ph" },
+        { "name": "MAIL_FROM_NAME", "value": "CBSUA ICT Services Portal" }
+      ],
+      "secrets": [
+        { "name": "APP_KEY",                  "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:322909724195:secret:ictservices-app-IAbPGh:APP_KEY::" },
+        { "name": "DB_PASSWORD",              "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:322909724195:secret:ictservices-app-IAbPGh:DB_PASSWORD::" },
+        { "name": "PASSPORT_PRIVATE_KEY_B64", "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:322909724195:secret:ictservices-app-IAbPGh:PASSPORT_PRIVATE_KEY_B64::" },
+        { "name": "PASSPORT_PUBLIC_KEY_B64",  "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:322909724195:secret:ictservices-app-IAbPGh:PASSPORT_PUBLIC_KEY_B64::" },
+        { "name": "MAIL_PASSWORD",  "valueFrom": "arn:aws:secretsmanager:ap-southeast-1:322909724195:secret:ictservices-app-IAbPGh:MAIL_PASSWORD::" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/ictservices",
+          "awslogs-region": "ap-southeast-1",
+          "awslogs-stream-prefix": "app"
+        }
+      }
+    }
+  ]
+}

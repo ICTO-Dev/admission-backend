@@ -1,0 +1,139 @@
+name: Deploy admission API to ECS
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Version part to bump'
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+
+permissions:
+  id-token: write
+  contents: write        # required to create tags and releases
+
+env:
+  AWS_REGION: ap-southeast-1
+  ECR_REPOSITORY: admission
+  ECS_CLUSTER: cbsua-core
+  ECS_SERVICE: admission
+  CONTAINER_NAME: admission
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0        # need full history so tags are visible
+
+      # ------------------------------------------------------------------
+      # Work out the next version from the latest v* tag.
+      # Every push to main produces a new tag, so any previous deploy can
+      # be rolled back to by its immutable image tag.
+      # ------------------------------------------------------------------
+      - name: Compute version
+        id: version
+        run: |
+          git fetch --tags --force
+          LATEST=$(git tag -l 'v*.*.*' --sort=-v:refname | head -n1)
+          [ -z "$LATEST" ] && LATEST="v0.0.0"
+          echo "Latest tag: $LATEST"
+
+          MAJOR=$(echo "${LATEST#v}" | cut -d. -f1)
+          MINOR=$(echo "${LATEST#v}" | cut -d. -f2)
+          PATCH=$(echo "${LATEST#v}" | cut -d. -f3)
+
+          case "${{ inputs.bump || 'patch' }}" in
+            major) MAJOR=$((MAJOR+1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR+1)); PATCH=0 ;;
+            *)     PATCH=$((PATCH+1)) ;;
+          esac
+
+          VERSION="v${MAJOR}.${MINOR}.${PATCH}"
+          echo "New version: $VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "sha_short=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::322909724195:role/cbsua-core-github-deploy
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # Three tags per build:
+      #   v1.2.3    — immutable, this is what you roll back to
+      #   <sha>     — traceable to the exact commit
+      #   latest    — convenience only; never deploy from it
+      - name: Build and push image
+        id: build
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          VERSION: ${{ steps.version.outputs.version }}
+          SHA: ${{ steps.version.outputs.sha_short }}
+        run: |
+          IMAGE="$REGISTRY/$ECR_REPOSITORY"
+          docker build \
+            --build-arg APP_VERSION="$VERSION" \
+            -t "$IMAGE:$VERSION" \
+            -t "$IMAGE:$SHA" \
+            -t "$IMAGE:latest" .
+          docker push "$IMAGE:$VERSION"
+          docker push "$IMAGE:$SHA"
+          docker push "$IMAGE:latest"
+          echo "image=$IMAGE:$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Render task definition
+        id: taskdef
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: taskdef.json
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.build.outputs.image }}
+
+      - name: Deploy to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.taskdef.outputs.task-definition }}
+          service: ${{ env.ECS_SERVICE }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          wait-for-service-stability: true
+
+      # Tag and release only AFTER a successful deploy, so a version number
+      # never refers to something that failed to roll out.
+      - name: Tag and create release
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$VERSION" -m "Deployed $VERSION to ECS"
+          git push origin "$VERSION"
+
+          PREV=$(git tag -l 'v*.*.*' --sort=-v:refname | sed -n '2p')
+          if [ -n "$PREV" ]; then
+            NOTES=$(git log --pretty='- %s (%an)' "$PREV..HEAD")
+          else
+            NOTES=$(git log --pretty='- %s (%an)' -20)
+          fi
+
+          gh release create "$VERSION" \
+            --title "$VERSION" \
+            --notes "$(printf 'Deployed to ECS cluster %s, service %s.\n\nImage: %s\n\n## Changes\n%s\n\n## Rollback\n```bash\naws ecs update-service --cluster %s --service %s \\\n  --task-definition $(aws ecs describe-services --cluster %s --services %s \\\n  --query "services[0].taskDefinition" --output text) --region %s\n```' \
+              "$ECS_CLUSTER" "$ECS_SERVICE" "${{ steps.build.outputs.image }}" "$NOTES" \
+              "$ECS_CLUSTER" "$ECS_SERVICE" "$ECS_CLUSTER" "$ECS_SERVICE" "$AWS_REGION")"
+
+      - name: Show service events on failure
+        if: failure()
+        run: |
+          aws ecs describe-services --cluster $ECS_CLUSTER --services $ECS_SERVICE \
+            --query 'services[0].events[:10].[createdAt,message]' --output table || true
